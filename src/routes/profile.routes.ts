@@ -1,7 +1,13 @@
 import { Router } from 'express';
+import { getProfile, updateProfile } from '../controllers/profile.controller.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
+
 const router = Router();
 
-router.get('/', (req, res) => { res.send('Get user profile') });
-router.put('/', (req, res) => { res.send('Update user profile') });
+// Phải có Token mới được vào Profile
+router.use(verifyToken);
+
+router.get('/', getProfile);
+router.put('/', updateProfile);
 
 export default router;
