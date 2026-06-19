@@ -16,6 +16,8 @@ model User {
   role          String   @default("Employee") // Admin hoặc Employee
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  resetOtp    String?   
+  otpExpiry   DateTime? 
 }
 
 model Customer {
