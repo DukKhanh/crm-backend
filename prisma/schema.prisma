@@ -8,16 +8,16 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   full_name     String
-  email         String   @unique
+  email         String    @unique
   password_hash String
   avatar        String?
-  role          String   @default("Employee") // Admin hoặc Employee
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  resetOtp    String?   
-  otpExpiry   DateTime? 
+  role          String    @default("Employee")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  resetOtp      String?
+  otpExpiry     DateTime?
   expoPushToken String?
 }
 
@@ -28,34 +28,30 @@ model Customer {
   email     String?
   company   String?
   address   String?
-  status    String   @default("New") // New, Contacted, Converted, vv.
-  tasks     Task[]   // Quan hệ 1-N với Task
-  notes     Note[]   // Quan hệ 1-N với Note
+  status    String   @default("New")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  notes     Note[]
+  tasks     Task[]
 }
 
 model Task {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String?
   deadline    DateTime?
-  status      String   @default("Pending") // Pending, In Progress, Completed
-  
+  status      String    @default("Pending")
   customer_id String
-  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customer    Customer  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 }
 
 model Note {
   id          String   @id @default(uuid())
   content     String
-  
   customer_id String
-  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 }
