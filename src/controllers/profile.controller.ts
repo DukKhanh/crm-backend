@@ -53,3 +53,16 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
     res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) { res.status(500).json({ message: 'Lỗi server' }); }
 };
+
+export const savePushToken = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { token } = req.body;
+    await prisma.user.update({
+      where: { id: req.user.userId },
+      data: { expoPushToken: token }
+    });
+    res.status(200).json({ message: 'Đã lưu Push Token' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi lưu token' });
+  }
+};

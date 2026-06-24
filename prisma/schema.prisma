@@ -18,6 +18,7 @@ model User {
   updatedAt     DateTime @updatedAt
   resetOtp    String?   
   otpExpiry   DateTime? 
+  expoPushToken String?
 }
 
 model Customer {

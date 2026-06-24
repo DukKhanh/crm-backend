@@ -63,7 +63,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       message: 'Đăng nhập thành công',
       token,
       refreshToken,
-      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role }
+      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role, avatar: user.avatar }
     });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error });
