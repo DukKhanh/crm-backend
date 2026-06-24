@@ -13,7 +13,9 @@ import noteRoutes from './routes/note.routes.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT: number = process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 3000;
 
 // Prisma init (THÊM MỚI)
 const prisma = new PrismaClient({
@@ -42,8 +44,10 @@ async function startServer() {
     process.exit(1); // ép crash để Render thấy lỗi thật
   }
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log("🔥 REACH BEFORE LISTEN");
+
+  app.listen(PORT, '0.0.0.0', () => {
+  console.log("🚀 SERVER STARTED");
   });
 }
 
