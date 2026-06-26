@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  full_name     String
+  email         String    @unique
+  password_hash String
+  avatar        String?
+  role          String    @default("Employee")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  resetOtp      String?
+  otpExpiry     DateTime?
+  expoPushToken String?
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  company   String?
+  address   String?
+  status    String   @default("New")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  notes     Note[]
+  tasks     Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  deadline    DateTime?
+  status      String    @default("Pending")
+  customer_id String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customer    Customer  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  content     String
+  customer_id String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+}
