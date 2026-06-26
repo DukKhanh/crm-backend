@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getTasks, createTask, updateTaskStatus, updateTask, deleteTask } from '../controllers/task.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { getTasks, createTask, updateTaskStatus, updateTask, deleteTask } from '../controllers/task.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 // Bảo vệ API bằng token

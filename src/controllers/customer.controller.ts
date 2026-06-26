@@ -1,6 +1,6 @@
 import type { Response } from 'express';
-import prisma from '../config/prisma.js';
-import type { AuthRequest } from '../middlewares/auth.middleware.js';
+import prisma from '../config/prisma';
+import type { AuthRequest } from '../middlewares/auth.middleware';
 
 // 1. Lấy danh sách khách hàng
 export const getCustomers = async (req: AuthRequest, res: Response) => {

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { register, login, refreshTokenAPI } from '../controllers/auth.controller.js';
-import {forgotPassword, resetPassword} from '../controllers/auth.controller.js';
+import { register, login, refreshTokenAPI } from '../controllers/auth.controller';
+import {forgotPassword, resetPassword} from '../controllers/auth.controller';
 const router = Router();
 
 router.post('/register', register);

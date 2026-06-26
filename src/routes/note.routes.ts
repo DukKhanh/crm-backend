@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { createNote } from '../controllers/note.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { createNote } from '../controllers/note.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 

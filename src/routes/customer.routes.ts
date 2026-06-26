@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { 
   getCustomers, getCustomerById, createCustomer, 
   updateCustomer, deleteCustomer 
-} from '../controllers/customer.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
+} from '../controllers/customer.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 
