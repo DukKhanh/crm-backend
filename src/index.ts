@@ -45,9 +45,9 @@ async function startServer() {
   }
 
   console.log("🔥 REACH BEFORE LISTEN");
-
+  console.log(`PORT = ${PORT}`);
   app.listen(PORT, '0.0.0.0', () => {
-  console.log("🚀 SERVER STARTED");
+  console.log(`🚀 SERVER STARTED ON PORT ${PORT}`);
   });
 }
 
