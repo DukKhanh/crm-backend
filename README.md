@@ -1,232 +1,472 @@
-# CRM Connect — Backend API
+# CRM Connect Backend API
 
-A production-ready **RESTful CRM backend** built with **Node.js**, **Express**, **TypeScript**, and **Prisma** (PostgreSQL). Designed to manage customers, tasks, notes, and user authentication for a CRM application.
+<p align="center">
+  <strong>A production-ready RESTful CRM backend built with Node.js, Express.js, TypeScript, Prisma ORM, and PostgreSQL.</strong>
+</p>
+
+<p align="center">
+Designed as a portfolio project to demonstrate backend development skills, including authentication, customer management, task tracking, email-based password recovery, push notifications, Dockerized deployment, and automated testing.
+</p>
+
+<p align="center">
+
+![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express-5.x-000000?logo=express)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
+![Jest](https://img.shields.io/badge/Tested_with-Jest-C21325?logo=jest)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+</p>
 
 ---
 
-## Features
+# Project Overview
 
-- 🔐 **JWT Authentication** — Access token + refresh token flow
-- 👤 **User Management** — Register, login, profile update, change password
-- 📇 **Customer Management** — Full CRUD with status tracking
-- ✅ **Task Management** — Create, update status/details, delete tasks
-- 📝 **Notes** — Attach notes to customers
-- 📧 **Forgot Password** — OTP-based password reset via email
-- 🔔 **Push Notifications** — Expo push notification on task creation
-- 🐳 **Docker Ready** — Multi-stage Dockerfile + docker-compose
-- 🛡️ **Input Validation** — Request validation middleware on auth routes
-- ⚙️ **Graceful Shutdown** — Handles SIGTERM/SIGINT properly
+CRM Connect Backend API is a RESTful backend service for a Customer Relationship Management (CRM) system.
+
+The project focuses on applying backend engineering best practices by implementing authentication, customer management, task management, password recovery, push notifications, Dockerized deployment, and automated integration testing.
+
+Rather than being a simple CRUD application, it demonstrates how modern backend services are structured using Express, Prisma ORM, and PostgreSQL.
 
 ---
 
-## Tech Stack
+# Highlights
+
+- RESTful API Architecture
+- JWT Authentication & Refresh Token
+- Customer, Task, Note & Profile Management
+- OTP-based Password Recovery via Email
+- Expo Push Notifications
+- Prisma ORM + PostgreSQL
+- Dockerized Development Environment
+- Integration Testing using Jest & Supertest
+- Centralized Error Handling
+- Input Validation Middleware
+- Graceful Server Shutdown
+
+---
+
+# System Architecture
+
+```text
+                    Client
+                       │
+                       ▼
+               Express REST API
+                       │
+        Authentication Middleware
+                       │
+                 Controllers
+                       │
+                  Prisma ORM
+                       │
+                  PostgreSQL
+```
+
+---
+
+# Features
+
+## Authentication
+
+- User Registration
+- Login
+- JWT Authentication
+- Refresh Token Flow
+- Logout
+- Change Password
+- Forgot Password
+- OTP Email Verification
+- Profile Management
+
+---
+
+## Customer Management
+
+- Create Customer
+- Get Customer List
+- Customer Detail
+- Update Customer
+- Delete Customer
+- Customer Status Tracking
+
+---
+
+## Task Management
+
+- Create Task
+- Update Task
+- Delete Task
+- Update Task Status
+- Assign Deadline
+- Customer Relationship
+
+---
+
+## Notes
+
+- Create Notes
+- View Notes
+- Delete Notes
+- Customer Relationship
+
+---
+
+## Notifications
+
+- Expo Push Notification
+- Notification on Task Creation
+
+---
+
+## Security
+
+- Password Hashing using bcrypt
+- JWT Authentication
+- Protected Routes
+- Request Validation
+- Centralized Error Handling
+
+---
+
+# Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|--------|------------|
 | Runtime | Node.js 20+ |
-| Framework | Express 5 |
-| Language | TypeScript 6 |
-| ORM | Prisma 6 |
-| Database | PostgreSQL 16 |
-| Auth | JSON Web Tokens (JWT) |
+| Framework | Express.js 5 |
+| Language | TypeScript 5 |
+| ORM | Prisma ORM |
+| Database | PostgreSQL |
+| Authentication | JWT |
 | Password Hashing | bcrypt |
-| Email | Nodemailer (Gmail SMTP) |
+| Email | Nodemailer |
 | Push Notifications | Expo Server SDK |
-| Containerization | Docker + Docker Compose |
+| Containerization | Docker & Docker Compose |
 | Testing | Jest + Supertest |
+| Validation | express-validator |
+| API Style | RESTful API |
 
 ---
 
-## Folder Structure
+# Folder Structure
 
 ```
 .
-├── src/
-│   ├── __tests__/          # Integration tests
-│   ├── constants/          # HTTP status codes & error messages
-│   ├── controllers/        # Request handlers (business logic)
-│   ├── middlewares/        # Auth guard, error handler
-│   ├── prisma/             # Prisma client singleton
-│   ├── routes/             # Express routers
-│   ├── types/              # TypeScript type extensions
-│   ├── utils/              # Response helpers
-│   ├── validators/         # Request validation middleware
-│   ├── app.ts              # Express app setup
-│   └── index.ts            # Server entry point
-├── prisma/
-│   └── schema.prisma       # Database schema
 ├── docs/
-│   └── api.md              # Full API reference
-├── .env.example            # Environment variable template
-├── Dockerfile              # Multi-stage production build
-├── docker-compose.yml      # PostgreSQL + App services
+│   └── api.md
+│
+├── prisma/
+│   └── schema.prisma
+│
+├── src/
+│   ├── __tests__/
+│   ├── constants/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── prisma/
+│   ├── routes/
+│   ├── types/
+│   ├── utils/
+│   ├── validators/
+│   ├── app.ts
+│   └── index.ts
+│
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+├── jest.config.js
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+└── README.md
 ```
 
 ---
 
-## Installation
+# Installation
 
-### Prerequisites
+## Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 20
-- [PostgreSQL](https://www.postgresql.org/) >= 14  *(or use Docker)*
+- Node.js 20+
+- PostgreSQL 16+
+- Docker (Optional)
 
-### Steps
+---
+
+## Clone Repository
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/crm-connect-backend.git
-cd crm-connect-backend
+git clone https://github.com/DukKhanh/crm-backend.git
 
-# 2. Install dependencies
+cd crm-backend
+```
+
+---
+
+## Install Dependencies
+
+```bash
 npm install
+```
 
-# 3. Copy environment variables
+---
+
+## Configure Environment Variables
+
+```bash
 cp .env.example .env
-# Edit .env with your values
+```
 
-# 4. Generate Prisma client & run migrations
+Update the values inside `.env`.
+
+---
+
+## Generate Prisma Client
+
+```bash
 npm run db:generate
+```
+
+---
+
+## Run Database Migration
+
+```bash
 npm run db:migrate
-
-# 5. Start the development server
-npm run dev
 ```
 
 ---
 
-## Environment Variables
-
-Create a `.env` file from `.env.example`:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PORT` | Server port | `3000` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/crm_connect` |
-| `JWT_SECRET` | Secret key for signing JWTs | `my_super_secret` |
-| `JWT_EXPIRES_IN` | Access token expiry | `15m` |
-| `JWT_REFRESH_EXPIRES_IN` | Refresh token expiry | `7d` |
-| `MAIL_USER` | Gmail address for OTP emails | `you@gmail.com` |
-| `MAIL_PASS` | Gmail App Password | `abcd efgh ijkl mnop` |
-| `MAIL_FROM` | Email sender display name | `"CRM Connect <you@gmail.com>"` |
-
-> ⚠️ For Gmail, use an **App Password** (not your account password). [Learn how](https://support.google.com/accounts/answer/185833).
-
----
-
-## Running Locally
+## Start Development Server
 
 ```bash
-# Development (hot-reload)
 npm run dev
+```
 
-# Type-check without compiling
-npm run lint
+The API will be available at
 
-# Build for production
-npm run build
-
-# Start production build
-npm start
+```
+http://localhost:3000
 ```
 
 ---
 
-## Running with Docker
+# Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| PORT | Application Port |
+| DATABASE_URL | PostgreSQL Connection String |
+| JWT_SECRET | JWT Secret |
+| JWT_EXPIRES_IN | Access Token Expiration |
+| JWT_REFRESH_EXPIRES_IN | Refresh Token Expiration |
+| MAIL_USER | Gmail Account |
+| MAIL_PASS | Gmail App Password |
+| MAIL_FROM | Sender Name |
+
+---
+
+# Docker
+
+Build & Run
 
 ```bash
-# Start PostgreSQL + App (builds image automatically)
 docker-compose up --build
+```
 
-# Run in background
-docker-compose up -d --build
+Background
 
-# Stop all services
+```bash
+docker-compose up -d
+```
+
+Stop
+
+```bash
 docker-compose down
 ```
 
-The API will be available at `http://localhost:3000`.
+Apply migrations
 
-> **Note:** On first run, you still need to apply database migrations:
-> ```bash
-> docker-compose exec app npx prisma migrate deploy
-> ```
+```bash
+docker-compose exec app npx prisma migrate deploy
+```
 
 ---
 
-## Running Tests
+# Running Tests
 
 ```bash
 npm test
 ```
 
-Tests use `supertest` to make real HTTP requests against the Express app without a live database connection.
+Generate coverage
+
+```bash
+npm run test:coverage
+```
+
+Integration tests are written using **Jest** and **Supertest**.
 
 ---
 
-## API Endpoints
+# API Overview
 
-See [docs/api.md](docs/api.md) for the full API reference.
-
-### Quick Overview
-
-| Group | Base Path | Auth Required |
-|-------|-----------|:---:|
+| Module | Endpoint | Authentication |
+|---------|----------|:--------------:|
 | Auth | `/api/auth` | ❌ |
 | Customers | `/api/customers` | ✅ |
 | Tasks | `/api/tasks` | ✅ |
-| Profile | `/api/profile` | ✅ |
 | Notes | `/api/notes` | ✅ |
+| Profile | `/api/profile` | ✅ |
 
----
-
-## Authentication Flow
+Complete API documentation is available in:
 
 ```
-1. POST /api/auth/register  →  Create account
-2. POST /api/auth/login     →  Receive { token, refreshToken }
-3. All protected requests   →  Header: Authorization: Bearer <token>
-4. Token expires (15m)      →  POST /api/auth/refresh with refreshToken
-5. Refresh expires (7d)     →  Re-login required
-```
-
-**Forgot Password Flow:**
-```
-1. POST /api/auth/forgot-password  →  OTP sent to email (valid 15 min)
-2. POST /api/auth/reset-password   →  Submit email + OTP + new password
+docs/api.md
 ```
 
 ---
 
-## Database Schema
+# Authentication Flow
 
-```
-User          — id, full_name, email, password_hash, role, avatar, expoPushToken
-Customer      — id, name, phone, email, company, address, status
-Task          — id, title, description, deadline, status, customer_id (FK)
-Note          — id, content, customer_id (FK)
+```text
+Register
+     │
+     ▼
+ Login
+     │
+     ▼
+Receive Access Token + Refresh Token
+     │
+     ▼
+Access Protected APIs
+     │
+     ▼
+Access Token Expired?
+     │
+     ├── No → Continue
+     │
+     └── Yes
+            │
+            ▼
+Refresh Token
+            │
+            ▼
+New Access Token
 ```
 
-Relations: `Customer` has many `Task` and `Note` (cascade delete).
+Forgot Password Flow
+
+```text
+Forgot Password
+
+      │
+
+      ▼
+
+OTP sent to Email
+
+      │
+
+      ▼
+
+Verify OTP
+
+      │
+
+      ▼
+
+Reset Password
+```
 
 ---
 
-## Future Improvements
+# Database Schema
 
-- [ ] Add pagination to `GET /customers` and `GET /tasks`
-- [ ] Role-based access control (Admin vs Employee)
-- [ ] Centralize request validation with [Zod](https://zod.dev/)
-- [ ] Add rate limiting (`express-rate-limit`) to auth routes
-- [ ] Implement refresh token rotation for better security
-- [ ] Add structured logging with [Winston](https://github.com/winstonjs/winston)
-- [ ] Set up CI/CD pipeline (GitHub Actions)
-- [ ] Write unit tests for controllers with mocked Prisma
-- [ ] Add Swagger/OpenAPI auto-generated documentation
+```text
+User
+├── id
+├── full_name
+├── email
+├── password_hash
+├── avatar
+├── role
+└── expoPushToken
+
+Customer
+├── id
+├── name
+├── phone
+├── email
+├── company
+├── address
+└── status
+
+Task
+├── id
+├── title
+├── description
+├── deadline
+├── status
+└── customer_id
+
+Note
+├── id
+├── content
+└── customer_id
+```
+
+Relations
+
+```
+Customer
+
+├── Tasks (One-to-Many)
+
+└── Notes (One-to-Many)
+```
 
 ---
 
-## License
 
-[MIT](LICENSE)
+# Future Improvements
+
+- Add Swagger/OpenAPI Documentation
+- Implement Role-Based Access Control
+- Refresh Token Rotation
+- Pagination & Filtering
+- Redis Cache
+- API Rate Limiting
+- Winston Logging
+- GitHub Actions CI/CD
+- Cloudinary File Upload
+- Unit Tests with Mocked Prisma
+- WebSocket Real-time Notifications
+
+---
+
+# Why This Project?
+
+This project was built to practice designing and implementing a production-style backend application using modern Node.js technologies.
+
+Instead of focusing solely on CRUD operations, it includes authentication, email verification, push notifications, Dockerized deployment, integration testing, and production-oriented project structure to simulate a real-world backend service.
+
+---
+
+# License
+
+This project is licensed under the MIT License.
+
+---
+
+# Author
+
+**Le Duc Khanh**
+
+- GitHub: https://github.com/DukKhanh
+- Email: leduckhanh280804@gmail.com
+- LinkedIn: https://www.linkedin.com/in/ldk288
