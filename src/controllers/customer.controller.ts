@@ -1,76 +1,99 @@
 import type { Response } from 'express';
-import prisma from '../config/prisma';
-import type { AuthRequest } from '../middlewares/auth.middleware';
+import prisma from '../prisma/client.js';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
+import { sendError } from '../utils/response.js';
+import type { AuthRequest } from '../types/express.js';
 
-// 1. Lấy danh sách khách hàng
-export const getCustomers = async (req: AuthRequest, res: Response) => {
+export const getCustomers = async (
+  _req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const customers = await prisma.customer.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
-    res.status(200).json(customers);
+    res.status(HTTP_STATUS.OK).json(customers);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
   }
 };
 
-// 2. Lấy chi tiết 1 khách hàng
-export const getCustomerById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getCustomerById = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const  id  = req.params.id as string;
+    const id = req.params.id as string;
     const customer = await prisma.customer.findUnique({
       where: { id },
-      include: { tasks: true, notes: true } // Kéo theo cả tasks và notes của KH này
+      include: { tasks: true, notes: true },
     });
 
     if (!customer) {
-      res.status(404).json({ message: 'Không tìm thấy khách hàng' });
+      sendError(res, HTTP_STATUS.NOT_FOUND, ERROR_MESSAGES.CUSTOMER_NOT_FOUND);
       return;
     }
-    res.status(200).json(customer);
+
+    res.status(HTTP_STATUS.OK).json(customer);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
   }
 };
 
-// 3. Tạo khách hàng mới
-export const createCustomer = async (req: AuthRequest, res: Response) => {
+export const createCustomer = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const { name, phone, email, company, address, status } = req.body;
+    const { name, phone, email, company, address, status } = req.body as {
+      name: string;
+      phone?: string;
+      email?: string;
+      company?: string;
+      address?: string;
+      status?: string;
+    };
+
     const newCustomer = await prisma.customer.create({
-      data: { name, phone, email, company, address, status }
+      data: { name, phone, email, company, address, status },
     });
-    res.status(201).json(newCustomer);
+
+    res.status(HTTP_STATUS.CREATED).json(newCustomer);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
   }
 };
 
-// 4. Cập nhật khách hàng
-export const updateCustomer = async (req: AuthRequest, res: Response) => {
+export const updateCustomer = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const  id  = req.params.id as string;
-    const data = req.body;
+    const id = req.params.id as string;
+    const data = req.body as Record<string, unknown>;
 
     const updatedCustomer = await prisma.customer.update({
       where: { id },
-      data
+      data,
     });
-    res.status(200).json(updatedCustomer);
+
+    res.status(HTTP_STATUS.OK).json(updatedCustomer);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi cập nhật', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update customer', error);
   }
 };
 
-// 5. Xóa khách hàng
-export const deleteCustomer = async (req: AuthRequest, res: Response) => {
+export const deleteCustomer = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const  id  = req.params.id as string;
-    await prisma.customer.delete({
-      where: { id }
-    });
-    res.status(200).json({ message: 'Đã xóa khách hàng thành công' });
+    const id = req.params.id as string;
+    await prisma.customer.delete({ where: { id } });
+    res
+      .status(HTTP_STATUS.OK)
+      .json({ message: 'Customer deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi xóa', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to delete customer', error);
   }
 };

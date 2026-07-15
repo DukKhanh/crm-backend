@@ -1,24 +1,36 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
+import type { AuthRequest, JwtPayload } from '../types/express.js';
 
-// Mở rộng interface Request để chứa thông tin user
-export interface AuthRequest extends Request {
-  user?: any;
-}
-
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const token = req.header('Authorization')?.split(' ')[1]; // Format: Bearer <token>
+/**
+ * Middleware to protect routes by verifying the JWT access token.
+ * Expects: Authorization: Bearer <token>
+ */
+export const verifyToken = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): void => {
+  const token = req.header('Authorization')?.split(' ')[1];
 
   if (!token) {
-    res.status(401).json({ message: 'Không có token, từ chối truy cập' });
+    res
+      .status(HTTP_STATUS.UNAUTHORIZED)
+      .json({ message: ERROR_MESSAGES.AUTH_REQUIRED });
     return;
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    req.user = decoded; // Gắn thông tin user (userId, role) vào request
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string,
+    ) as JwtPayload;
+    req.user = decoded;
     next();
-  } catch (error) {
-    res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+  } catch {
+    res
+      .status(HTTP_STATUS.UNAUTHORIZED)
+      .json({ message: ERROR_MESSAGES.INVALID_TOKEN });
   }
 };

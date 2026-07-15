@@ -1,89 +1,124 @@
 import type { Response } from 'express';
-import prisma from '../config/prisma';
-import type { AuthRequest } from '../middlewares/auth.middleware';
 import { Expo } from 'expo-server-sdk';
+import prisma from '../prisma/client.js';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
+import { sendError } from '../utils/response.js';
+import type { AuthRequest } from '../types/express.js';
 
 const expo = new Expo();
 
-// 1. Lấy danh sách công việc (Kèm tên khách hàng)
-export const getTasks = async (req: AuthRequest, res: Response) => {
+/** GET /api/tasks — Retrieve all tasks with associated customer name */
+export const getTasks = async (
+  _req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const tasks = await prisma.task.findMany({
-      include: { customer: { select: { name: true } } }, // Lấy thêm tên KH
-      orderBy: { createdAt: 'desc' }
+      include: { customer: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
     });
-    res.status(200).json(tasks);
+    res.status(HTTP_STATUS.OK).json(tasks);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
   }
 };
 
-// 2. Tạo công việc mới
-export const createTask = async (req: AuthRequest, res: Response): Promise<void> => {
+/** POST /api/tasks — Create a new task and send a push notification to the creator */
+export const createTask = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
-    const { title, description, deadline, customer_id } = req.body;
+    const { title, description, deadline, customer_id } = req.body as {
+      title: string;
+      description?: string;
+      deadline?: string;
+      customer_id: string;
+    };
+
     const newTask = await prisma.task.create({
-      data: { title, description, deadline, customer_id }
+      data: { title, description, deadline, customer_id },
     });
 
-      const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    // Send push notification to the task creator if they have an Expo push token
+    if (req.user?.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+      });
+
       if (user?.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
-        const messages = [{
-          to: user.expoPushToken,
-          sound: 'default',
-          title: 'Có công việc mới! 📋',
-          body: `Bạn vừa tạo công việc: ${title}`,
-          data: { taskId: newTask.id },
-        }];
-        
-        // Gửi đi
-        await expo.sendPushNotificationsAsync(messages as any);
+        await expo.sendPushNotificationsAsync([
+          {
+            to: user.expoPushToken,
+            sound: 'default',
+            title: 'New Task Created 📋',
+            body: `You just created: ${title}`,
+            data: { taskId: newTask.id },
+          },
+        ]);
       }
-    res.status(201).json(newTask);
+    }
+
+    res.status(HTTP_STATUS.CREATED).json(newTask);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi tạo công việc', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to create task', error);
   }
 };
 
-
-
-// 3. Cập nhật trạng thái công việc
-export const updateTaskStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+/** PUT /api/tasks/:id — Update the status of a task */
+export const updateTaskStatus = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { status } = req.body;
+    const { status } = req.body as { status: string };
+
     const updatedTask = await prisma.task.update({
       where: { id },
-      data: { status }
+      data: { status },
     });
-    res.status(200).json(updatedTask);
+
+    res.status(HTTP_STATUS.OK).json(updatedTask);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi cập nhật', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update task status', error);
   }
 };
 
-// 4. Cập nhật toàn bộ thông tin công việc (Tiêu đề, KH, Hạn chót)
-export const updateTask = async (req: AuthRequest, res: Response): Promise<void> => {
+/** PUT /api/tasks/:id/edit — Update task details (title, deadline, customer) */
+export const updateTask = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { title, deadline, customer_id } = req.body;
+    const { title, deadline, customer_id } = req.body as {
+      title?: string;
+      deadline?: string;
+      customer_id?: string;
+    };
+
     const updatedTask = await prisma.task.update({
       where: { id },
-      data: { title, deadline, customer_id }
+      data: { title, deadline, customer_id },
     });
-    res.status(200).json(updatedTask);
+
+    res.status(HTTP_STATUS.OK).json(updatedTask);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi cập nhật công việc', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update task', error);
   }
 };
 
-// 5. Xóa công việc
-export const deleteTask = async (req: AuthRequest, res: Response): Promise<void> => {
+/** DELETE /api/tasks/:id — Delete a task */
+export const deleteTask = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
   try {
     const id = req.params.id as string;
     await prisma.task.delete({ where: { id } });
-    res.status(200).json({ message: 'Đã xóa công việc' });
+    res.status(HTTP_STATUS.OK).json({ message: 'Task deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi xóa công việc', error });
+    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to delete task', error);
   }
 };

@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { getProfile, updateProfile } from '../controllers/profile.controller';
-import { verifyToken } from '../middlewares/auth.middleware';
-import { changePassword } from '../controllers/profile.controller';
-import { savePushToken } from '../controllers/profile.controller';
+import {
+  getProfile,
+  updateProfile,
+  changePassword,
+  savePushToken,
+} from '../controllers/profile.controller.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
-// Phải có Token mới được vào Profile
+
+// All profile routes require a valid JWT
 router.use(verifyToken);
 
 router.get('/', getProfile);
