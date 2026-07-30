@@ -1,12 +1,9 @@
 import { Router } from 'express';
-import { createNote } from '../controllers/note.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
-
+import { createNote } from '../controllers/note.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { createNoteSchema } from '../schemas/note.schema';
 const router = Router();
-
-// All note routes require a valid JWT
 router.use(verifyToken);
-
-router.post('/', createNote);
-
+router.post('/', validate(createNoteSchema), createNote);
 export default router;

@@ -1,22 +1,15 @@
 import { Router } from 'express';
-import {
-  getTasks,
-  createTask,
-  updateTaskStatus,
-  updateTask,
-  deleteTask,
-} from '../controllers/task.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
-
+import { createTask, deleteTask, getTasks, updateTask, updateTaskStatus } from '../controllers/task.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { createTaskSchema, taskIdSchema, updateTaskSchema, updateTaskStatusSchema } from '../schemas/task.schema';
 const router = Router();
-
-// All task routes require a valid JWT
 router.use(verifyToken);
-
 router.get('/', getTasks);
-router.post('/', createTask);
-router.put('/:id', updateTaskStatus);
-router.put('/:id/edit', updateTask);
-router.delete('/:id', deleteTask);
-
+router.post('/', validate(createTaskSchema), createTask);
+router.put('/:id', validate(updateTaskStatusSchema), updateTaskStatus);
+router.patch('/:id/status', validate(updateTaskStatusSchema), updateTaskStatus);
+router.put('/:id/edit', validate(updateTaskSchema), updateTask);
+router.patch('/:id', validate(updateTaskSchema), updateTask);
+router.delete('/:id', validate(taskIdSchema), deleteTask);
 export default router;

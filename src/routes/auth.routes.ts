@@ -1,22 +1,20 @@
 import { Router } from 'express';
-import {
-  register,
-  login,
-  refreshTokenAPI,
-  forgotPassword,
-  resetPassword,
-} from '../controllers/auth.controller.js';
-import {
-  validateAuthPayload,
-  validateRegisterPayload,
-} from '../validators/auth.validators.js';
+import rateLimit from 'express-rate-limit';
+import { forgotPassword, listSessions, login, logout, refreshTokenAPI, register, resetPassword, revokeAllSessions, revokeSession } from '../controllers/auth.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { forgotPasswordSchema, loginSchema, refreshSchema, registerSchema, resetPasswordSchema } from '../schemas/auth.schema';
 
 const router = Router();
-
-router.post('/register', validateRegisterPayload, register);
-router.post('/login', validateAuthPayload, login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-router.post('/refresh', refreshTokenAPI);
-
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 50, standardHeaders: true, legacyHeaders: false });
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/refresh', authLimiter, validate(refreshSchema), refreshTokenAPI);
+router.post('/logout', validate(refreshSchema), logout);
+router.post('/forgot-password', otpLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', otpLimiter, validate(resetPasswordSchema), resetPassword);
+router.get('/sessions', verifyToken, listSessions);
+router.delete('/sessions', verifyToken, revokeAllSessions);
+router.delete('/sessions/:sessionId', verifyToken, revokeSession);
 export default router;

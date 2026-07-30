@@ -1,124 +1,93 @@
-import type { Response } from 'express';
-import { Expo } from 'expo-server-sdk';
-import prisma from '../prisma/client.js';
-import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
-import { sendError } from '../utils/response.js';
-import type { AuthRequest } from '../types/express.js';
+import type { NextFunction, Response } from 'express';
+import prisma from '../config/prisma';
+import type { AuthRequest } from '../middlewares/auth.middleware';
+import { AppError } from '../errors/AppError';
 
-const expo = new Expo();
+const canAccessCustomer = async (req: AuthRequest, customerId: string) => {
+  return prisma.customer.findFirst({
+    where: { id: customerId, ...(req.user.role === 'ADMIN' ? {} : { ownerId: req.user.userId }) },
+    select: { id: true },
+  });
+};
 
-/** GET /api/tasks — Retrieve all tasks with associated customer name */
-export const getTasks = async (
-  _req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+const taskWhere = (req: AuthRequest, id?: string) => ({
+  ...(id ? { id } : {}),
+  ...(req.user.role === 'ADMIN'
+    ? {}
+    : { OR: [{ assigneeId: req.user.userId }, { createdById: req.user.userId }] }),
+});
+
+export const getTasks = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tasks = await prisma.task.findMany({
-      include: { customer: { select: { name: true } } },
+      where: taskWhere(req),
+      include: {
+        customer: { select: { id: true, name: true } },
+        assignee: { select: { id: true, full_name: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
-    res.status(HTTP_STATUS.OK).json(tasks);
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
-  }
+    res.status(200).json(tasks);
+  } catch (error) { next(error); }
 };
 
-/** POST /api/tasks — Create a new task and send a push notification to the creator */
-export const createTask = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+export const createTask = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { title, description, deadline, customer_id } = req.body as {
-      title: string;
-      description?: string;
-      deadline?: string;
-      customer_id: string;
-    };
-
-    const newTask = await prisma.task.create({
-      data: { title, description, deadline, customer_id },
-    });
-
-    // Send push notification to the task creator if they have an Expo push token
-    if (req.user?.userId) {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-      });
-
-      if (user?.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
-        await expo.sendPushNotificationsAsync([
-          {
-            to: user.expoPushToken,
-            sound: 'default',
-            title: 'New Task Created 📋',
-            body: `You just created: ${title}`,
-            data: { taskId: newTask.id },
-          },
-        ]);
-      }
+    const customer = await canAccessCustomer(req, req.body.customer_id);
+    if (!customer) throw new AppError(404, 'Không tìm thấy khách hàng');
+    const assigneeId = req.body.assigneeId ?? req.user.userId;
+    if (assigneeId !== req.user.userId && req.user.role === 'EMPLOYEE') {
+      throw new AppError(403, 'Employee không thể giao việc cho người khác');
     }
-
-    res.status(HTTP_STATUS.CREATED).json(newTask);
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to create task', error);
-  }
-};
-
-/** PUT /api/tasks/:id — Update the status of a task */
-export const updateTaskStatus = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
-  try {
-    const id = req.params.id as string;
-    const { status } = req.body as { status: string };
-
-    const updatedTask = await prisma.task.update({
-      where: { id },
-      data: { status },
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId }, select: { id: true } });
+    if (!assignee) throw new AppError(400, 'Người được giao việc không tồn tại');
+    const task = await prisma.task.create({
+      data: {
+        title: req.body.title,
+        description: req.body.description ?? null,
+        deadline: req.body.deadline ? new Date(req.body.deadline) : null,
+        customer_id: req.body.customer_id,
+        createdById: req.user.userId,
+        assigneeId,
+      },
     });
-
-    res.status(HTTP_STATUS.OK).json(updatedTask);
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update task status', error);
-  }
+    res.status(201).json(task);
+  } catch (error) { next(error); }
 };
 
-/** PUT /api/tasks/:id/edit — Update task details (title, deadline, customer) */
-export const updateTask = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+export const updateTaskStatus = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const id = req.params.id as string;
-    const { title, deadline, customer_id } = req.body as {
-      title?: string;
-      deadline?: string;
-      customer_id?: string;
+    const existing = await prisma.task.findFirst({ where: taskWhere(req, req.params.id), select: { id: true } });
+    if (!existing) throw new AppError(404, 'Không tìm thấy công việc');
+    const task = await prisma.task.update({ where: { id: existing.id }, data: { status: req.body.status } });
+    res.status(200).json(task);
+  } catch (error) { next(error); }
+};
+
+export const updateTask = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const existing = await prisma.task.findFirst({ where: taskWhere(req, req.params.id), select: { id: true } });
+    if (!existing) throw new AppError(404, 'Không tìm thấy công việc');
+    if (req.body.customer_id && !(await canAccessCustomer(req, req.body.customer_id))) {
+      throw new AppError(404, 'Không tìm thấy khách hàng');
+    }
+    if (req.body.assigneeId && req.body.assigneeId !== req.user.userId && req.user.role === 'EMPLOYEE') {
+      throw new AppError(403, 'Employee không thể giao việc cho người khác');
+    }
+    const data = {
+      ...req.body,
+      ...(req.body.deadline !== undefined ? { deadline: req.body.deadline ? new Date(req.body.deadline) : null } : {}),
     };
-
-    const updatedTask = await prisma.task.update({
-      where: { id },
-      data: { title, deadline, customer_id },
-    });
-
-    res.status(HTTP_STATUS.OK).json(updatedTask);
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update task', error);
-  }
+    const task = await prisma.task.update({ where: { id: existing.id }, data });
+    res.status(200).json(task);
+  } catch (error) { next(error); }
 };
 
-/** DELETE /api/tasks/:id — Delete a task */
-export const deleteTask = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+export const deleteTask = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const id = req.params.id as string;
-    await prisma.task.delete({ where: { id } });
-    res.status(HTTP_STATUS.OK).json({ message: 'Task deleted successfully' });
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to delete task', error);
-  }
+    const existing = await prisma.task.findFirst({ where: taskWhere(req, req.params.id), select: { id: true } });
+    if (!existing) throw new AppError(404, 'Không tìm thấy công việc');
+    await prisma.task.delete({ where: { id: existing.id } });
+    res.status(200).json({ message: 'Đã xóa công việc' });
+  } catch (error) { next(error); }
 };

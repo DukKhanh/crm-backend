@@ -1,22 +1,14 @@
 import { Router } from 'express';
-import {
-  getCustomers,
-  getCustomerById,
-  createCustomer,
-  updateCustomer,
-  deleteCustomer,
-} from '../controllers/customer.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
-
+import { createCustomer, deleteCustomer, getCustomerById, getCustomers, updateCustomer } from '../controllers/customer.controller';
+import { verifyToken } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { createCustomerSchema, customerIdSchema, updateCustomerSchema } from '../schemas/customer.schema';
 const router = Router();
-
-// All customer routes require a valid JWT
 router.use(verifyToken);
-
 router.get('/', getCustomers);
-router.get('/:id', getCustomerById);
-router.post('/', createCustomer);
-router.put('/:id', updateCustomer);
-router.delete('/:id', deleteCustomer);
-
+router.get('/:id', validate(customerIdSchema), getCustomerById);
+router.post('/', validate(createCustomerSchema), createCustomer);
+router.put('/:id', validate(updateCustomerSchema), updateCustomer);
+router.patch('/:id', validate(updateCustomerSchema), updateCustomer);
+router.delete('/:id', validate(customerIdSchema), deleteCustomer);
 export default router;

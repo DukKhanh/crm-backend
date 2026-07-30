@@ -1,112 +1,68 @@
 import type { Response } from 'express';
+import prisma from '../config/prisma';
+import type { AuthRequest } from '../middlewares/auth.middleware';
 import bcrypt from 'bcrypt';
-import prisma from '../prisma/client.js';
-import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
-import { sendError } from '../utils/response.js';
-import type { AuthRequest } from '../types/express.js';
 
-/** GET /api/profile — Get the authenticated user's profile */
-export const getProfile = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+// Lấy thông tin cá nhân
+export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.userId as string;
+    const userId = req.user.userId;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        full_name: true,
-        email: true,
-        role: true,
-        avatar: true,
-      },
+      select: { id: true, full_name: true, email: true, role: true, avatar: true }
     });
-    res.status(HTTP_STATUS.OK).json(user);
+    res.status(200).json(user);
   } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to retrieve profile', error);
+    res.status(500).json({ message: 'Lỗi khi lấy thông tin' });
   }
 };
 
-/** PUT /api/profile — Update full name and/or avatar */
-export const updateProfile = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+// Cập nhật thông tin (Tên và Avatar)
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.userId as string;
-    const { full_name, avatar } = req.body as {
-      full_name?: string;
-      avatar?: string;
-    };
+    const userId = req.user.userId;
+    const { full_name, avatar } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { full_name, avatar },
-      select: {
-        id: true,
-        full_name: true,
-        email: true,
-        role: true,
-        avatar: true,
-      },
+      select: { id: true, full_name: true, email: true, role: true, avatar: true }
     });
 
-    res
-      .status(HTTP_STATUS.OK)
-      .json({ message: 'Profile updated successfully', user: updatedUser });
+    res.status(200).json({ message: 'Cập nhật thành công', user: updatedUser });
   } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to update profile', error);
+    res.status(500).json({ message: 'Lỗi khi cập nhật profile' });
   }
 };
 
-/** PUT /api/profile/change-password — Change the authenticated user's password */
-export const changePassword = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
-  const userId = req.user?.userId as string;
-  const { oldPassword, newPassword } = req.body as {
-    oldPassword: string;
-    newPassword: string;
-  };
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user.userId;
+  const { oldPassword, newPassword } = req.body;
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      sendError(res, HTTP_STATUS.NOT_FOUND, ERROR_MESSAGES.USER_NOT_FOUND);
-      return;
-    }
+    if (!user) return;
 
     const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
-    if (!isMatch) {
-      sendError(res, HTTP_STATUS.BAD_REQUEST, 'Current password is incorrect');
-      return;
-    }
+    if (!isMatch) { res.status(400).json({ message: 'Mật khẩu cũ không đúng' }); return; }
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(newPassword, salt);
 
     await prisma.user.update({ where: { id: userId }, data: { password_hash } });
-    res.status(HTTP_STATUS.OK).json({ message: 'Password changed successfully' });
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_MESSAGES.SERVER_ERROR, error);
-  }
+    res.status(200).json({ message: 'Đổi mật khẩu thành công' });
+  } catch (error) { res.status(500).json({ message: 'Lỗi server' }); }
 };
 
-/** PUT /api/profile/push-token — Save the Expo push token for mobile notifications */
-export const savePushToken = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+export const savePushToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { token } = req.body as { token: string };
+    const { token } = req.body;
     await prisma.user.update({
-      where: { id: req.user?.userId as string },
-      data: { expoPushToken: token },
+      where: { id: req.user.userId },
+      data: { expoPushToken: token }
     });
-    res.status(HTTP_STATUS.OK).json({ message: 'Push token saved' });
+    res.status(200).json({ message: 'Đã lưu Push Token' });
   } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to save push token', error);
+    res.status(500).json({ message: 'Lỗi lưu token' });
   }
 };

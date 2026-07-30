@@ -1,31 +1,19 @@
-import type { Response } from 'express';
-import prisma from '../prisma/client.js';
-import { HTTP_STATUS } from '../constants/http.js';
-import { sendError } from '../utils/response.js';
-import type { AuthRequest } from '../types/express.js';
+import type { NextFunction, Response } from 'express';
+import prisma from '../config/prisma';
+import type { AuthRequest } from '../middlewares/auth.middleware';
+import { AppError } from '../errors/AppError';
 
-/** POST /api/notes — Create a note linked to a customer */
-export const createNote = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
+export const createNote = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { customer_id, content } = req.body as {
-      customer_id: string;
-      content: string;
-    };
-
-    if (!content) {
-      sendError(res, HTTP_STATUS.BAD_REQUEST, 'Note content must not be empty');
-      return;
-    }
-
-    const newNote = await prisma.note.create({
-      data: { customer_id, content },
+    const customer = await prisma.customer.findFirst({
+      where: { id: req.body.customer_id, ...(req.user.role === 'ADMIN' ? {} : { ownerId: req.user.userId }) },
+      select: { id: true },
     });
-
-    res.status(HTTP_STATUS.CREATED).json(newNote);
-  } catch (error) {
-    sendError(res, HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to create note', error);
-  }
+    if (!customer) throw new AppError(404, 'Không tìm thấy khách hàng');
+    const note = await prisma.note.create({
+      data: { customer_id: req.body.customer_id, content: req.body.content, authorId: req.user.userId },
+      include: { author: { select: { id: true, full_name: true } } },
+    });
+    res.status(201).json(note);
+  } catch (error) { next(error); }
 };

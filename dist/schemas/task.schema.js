@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.taskIdSchema = exports.updateTaskStatusSchema = exports.updateTaskSchema = exports.createTaskSchema = void 0;
+const client_1 = require("@prisma/client");
+const zod_1 = require("zod");
+const idParams = zod_1.z.object({ id: zod_1.z.string().uuid() });
+const dateValue = zod_1.z.string().datetime().optional().nullable();
+exports.createTaskSchema = zod_1.z.object({ body: zod_1.z.object({ title: zod_1.z.string().trim().min(2).max(160), description: zod_1.z.string().trim().max(2000).optional().nullable(), deadline: dateValue, customer_id: zod_1.z.string().uuid(), assigneeId: zod_1.z.string().uuid().optional() }).strict() });
+exports.updateTaskSchema = zod_1.z.object({ params: idParams, body: zod_1.z.object({ title: zod_1.z.string().trim().min(2).max(160).optional(), description: zod_1.z.string().trim().max(2000).optional().nullable(), deadline: dateValue, customer_id: zod_1.z.string().uuid().optional(), assigneeId: zod_1.z.string().uuid().optional() }).strict().refine((v) => Object.keys(v).length > 0) });
+exports.updateTaskStatusSchema = zod_1.z.object({ params: idParams, body: zod_1.z.object({ status: zod_1.z.nativeEnum(client_1.TaskStatus) }).strict() });
+exports.taskIdSchema = zod_1.z.object({ params: idParams });

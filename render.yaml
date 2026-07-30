@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: crm-connect-api
+    runtime: docker
+    dockerfilePath: ./crm-backend/Dockerfile
+    dockerContext: ./crm-backend
+    healthCheckPath: /health/ready
+    autoDeploy: true
+    preDeployCommand: npx prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUST_PROXY
+        value: 1
+      - key: LOG_LEVEL
+        value: info
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false

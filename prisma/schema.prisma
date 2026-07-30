@@ -7,51 +7,150 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum CustomerStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  TOKEN_ROTATED
+  REFRESH_REUSE_DETECTED
+  LOGOUT
+  SESSION_REVOKED
+  PASSWORD_RESET
+}
+
 model User {
-  id            String    @id @default(uuid())
-  full_name     String
-  email         String    @unique
-  password_hash String
-  avatar        String?
-  role          String    @default("Employee")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  resetOtp      String?
-  otpExpiry     DateTime?
-  expoPushToken String?
+  id               String           @id @default(uuid())
+  full_name        String
+  email            String           @unique
+  password_hash    String
+  avatar           String?
+  role              UserRole         @default(EMPLOYEE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  resetOtpHash      String?
+  otpExpiry         DateTime?
+  otpAttempts       Int              @default(0)
+  otpLastSentAt     DateTime?
+  expoPushToken     String?
+  customers         Customer[]       @relation("CustomerOwner")
+  createdTasks      Task[]           @relation("TaskCreator")
+  assignedTasks     Task[]           @relation("TaskAssignee")
+  notes             Note[]           @relation("NoteAuthor")
+  refreshSessions   RefreshSession[]
+  securityEvents    SecurityEvent[]
 }
 
 model Customer {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
+  ownerId   String
   name      String
   phone     String?
   email     String?
   company   String?
   address   String?
-  status    String   @default("New")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    CustomerStatus @default(NEW)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  owner     User           @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   notes     Note[]
   tasks     Task[]
+
+  @@index([ownerId, createdAt])
+  @@index([ownerId, status])
 }
 
 model Task {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
   description String?
   deadline    DateTime?
-  status      String    @default("Pending")
+  status      TaskStatus @default(PENDING)
   customer_id String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  customer    Customer  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  createdById String
+  assigneeId  String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  customer    Customer   @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  createdBy   User       @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+
+  @@index([assigneeId, status, deadline])
+  @@index([createdById, createdAt])
+  @@index([customer_id])
 }
 
 model Note {
   id          String   @id @default(uuid())
   content     String
   customer_id String
+  authorId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   customer    Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  author      User     @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([customer_id, createdAt])
+  @@index([authorId])
+}
+
+model RefreshSession {
+  id              String    @id @default(uuid())
+  familyId        String
+  parentSessionId String?
+  replacedById    String?
+  userId          String
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  revokeReason    String?
+  lastUsedAt      DateTime?
+  deviceId        String?
+  deviceName      String?
+  userAgent       String?
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId, revokedAt])
+  @@index([expiresAt])
+}
+
+model SecurityEvent {
+  id         String            @id @default(uuid())
+  userId     String?
+  type       SecurityEventType
+  sessionId  String?
+  familyId   String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+  user       User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([familyId])
 }

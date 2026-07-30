@@ -1,36 +1,73 @@
-import type { Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { HTTP_STATUS, ERROR_MESSAGES } from '../constants/http.js';
-import type { AuthRequest, JwtPayload } from '../types/express.js';
+import type { UserRole } from '@prisma/client';
+import { env } from '../config/env';
+import { AppError } from '../errors/AppError';
+import type { AccessTokenPayload } from '../types/auth';
 
-/**
- * Middleware to protect routes by verifying the JWT access token.
- * Expects: Authorization: Bearer <token>
- */
+export type { AccessTokenPayload } from '../types/auth';
+export type AuthRequest = Request;
+
 export const verifyToken = (
-  req: AuthRequest,
-  res: Response,
+  req: Request,
+  _res: Response,
   next: NextFunction,
 ): void => {
-  const token = req.header('Authorization')?.split(' ')[1];
+  const authorization = req.header('Authorization');
+
+  const token = authorization?.startsWith('Bearer ')
+    ? authorization.slice(7)
+    : null;
 
   if (!token) {
-    res
-      .status(HTTP_STATUS.UNAUTHORIZED)
-      .json({ message: ERROR_MESSAGES.AUTH_REQUIRED });
+    next(new AppError(401, 'Không có access token'));
     return;
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+      issuer: 'crm-connect-api',
+      audience: 'crm-connect-mobile',
+    }) as AccessTokenPayload;
+
+    if (decoded.type !== 'access') {
+      throw new Error('Wrong token type');
+    }
+
     req.user = decoded;
+
     next();
   } catch {
-    res
-      .status(HTTP_STATUS.UNAUTHORIZED)
-      .json({ message: ERROR_MESSAGES.INVALID_TOKEN });
+    next(
+      new AppError(
+        401,
+        'Access token không hợp lệ hoặc đã hết hạn',
+      ),
+    );
   }
 };
+
+export const requireRole =
+  (...roles: UserRole[]) =>
+  (
+    req: Request,
+    _res: Response,
+    next: NextFunction,
+  ): void => {
+    if (!req.user) {
+      next(new AppError(401, 'Chưa xác thực'));
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      next(
+        new AppError(
+          403,
+          'Bạn không có quyền thực hiện thao tác này',
+        ),
+      );
+      return;
+    }
+
+    next();
+  };
