@@ -4,5 +4,6 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },
+  setupFiles: ['<rootDir>/src/test/setupEnv.ts'],
   modulePathIgnorePatterns: ["<rootDir>/dist/"]
 };

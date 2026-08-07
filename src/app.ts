@@ -4,10 +4,15 @@ import helmet from 'helmet';
 import prisma from './config/prisma';
 import { env } from './config/env';
 import authRoutes from './routes/auth.routes';
-import customerRoutes from './routes/customer.routes';
-import taskRoutes from './routes/task.routes';
+import customerRoutes from './modules/customers/customer.routes';
+import taskRoutes from './modules/tasks/task.routes';
 import profileRoutes from './routes/profile.routes';
-import noteRoutes from './routes/note.routes';
+import noteRoutes from './modules/notes/note.routes';
+import userRoutes from './modules/users/user.routes';
+import securityEventRoutes from './modules/security-events/securityEvent.routes';
+import adminRoutes from './modules/admin/admin.routes';
+import swaggerUi from 'swagger-ui-express';
+import { openApiDocument } from './docs/openapi';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { requestContext } from './middlewares/requestContext.middleware';
 
@@ -37,12 +42,21 @@ app.get('/health/ready', async (_req, res) => {
   }
 });
 app.get('/health', (_req, res) => res.redirect(307, '/health/ready'));
+app.get('/api/openapi.json', (_req, res) => res.status(200).json(openApiDocument));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
+  customSiteTitle: 'CRM Connect API',
+  swaggerOptions: { persistAuthorization: true },
+}));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/security-events', securityEventRoutes);
+app.use('/api/admin', adminRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
+app.use(cors());
 export default app;

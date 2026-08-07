@@ -5,12 +5,19 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
   ADMIN
   MANAGER
   EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
 }
 
 enum CustomerStatus {
@@ -38,6 +45,9 @@ enum SecurityEventType {
   LOGOUT
   SESSION_REVOKED
   PASSWORD_RESET
+  ACCESS_DENIED
+  ROLE_CHANGED
+  ACCOUNT_STATUS_CHANGED
 }
 
 model User {
@@ -47,6 +57,8 @@ model User {
   password_hash    String
   avatar           String?
   role              UserRole         @default(EMPLOYEE)
+  status            UserStatus       @default(ACTIVE)
+  tokenVersion      Int              @default(0)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   resetOtpHash      String?
@@ -60,6 +72,8 @@ model User {
   notes             Note[]           @relation("NoteAuthor")
   refreshSessions   RefreshSession[]
   securityEvents    SecurityEvent[]
+
+  @@index([role, status])
 }
 
 model Customer {

@@ -6,6 +6,7 @@ import { env } from '../config/env';
 export interface RefreshTokenPayload {
   userId: string;
   role: UserRole;
+  tokenVersion: number;
   type: 'refresh';
   sessionId: string;
   familyId: string;
@@ -14,8 +15,8 @@ export interface RefreshTokenPayload {
 export const hashToken = (token: string): string =>
   crypto.createHash('sha256').update(token).digest('hex');
 
-export const createAccessToken = (userId: string, role: UserRole): string =>
-  jwt.sign({ userId, role, type: 'access' }, env.JWT_ACCESS_SECRET, {
+export const createAccessToken = (userId: string, role: UserRole, tokenVersion: number): string =>
+  jwt.sign({ userId, role, tokenVersion, type: 'access' }, env.JWT_ACCESS_SECRET, {
     expiresIn: `${env.ACCESS_TOKEN_MINUTES}m`,
     issuer: 'crm-connect-api',
     audience: 'crm-connect-mobile',
@@ -24,10 +25,11 @@ export const createAccessToken = (userId: string, role: UserRole): string =>
 export const createRefreshToken = (
   userId: string,
   role: UserRole,
+  tokenVersion: number,
   sessionId: string,
   familyId: string,
 ): string =>
-  jwt.sign({ userId, role, type: 'refresh', sessionId, familyId }, env.JWT_REFRESH_SECRET, {
+  jwt.sign({ userId, role, tokenVersion, type: 'refresh', sessionId, familyId }, env.JWT_REFRESH_SECRET, {
     expiresIn: `${env.REFRESH_TOKEN_DAYS}d`,
     issuer: 'crm-connect-api',
     audience: 'crm-connect-mobile',

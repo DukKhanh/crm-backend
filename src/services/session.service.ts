@@ -6,10 +6,10 @@ import { createAccessToken, createRefreshToken, hashToken, refreshExpiryDate, ve
 import type { RequestMetadata } from '../utils/requestMetadata';
 import { recordSecurityEvent } from './securityAudit.service';
 
-export async function createSession(user: Pick<User, 'id' | 'role'>, metadata: RequestMetadata) {
+export async function createSession(user: Pick<User, 'id' | 'role' | 'tokenVersion'>, metadata: RequestMetadata) {
   const sessionId = crypto.randomUUID();
   const familyId = crypto.randomUUID();
-  const refreshToken = createRefreshToken(user.id, user.role, sessionId, familyId);
+  const refreshToken = createRefreshToken(user.id, user.role, user.tokenVersion, sessionId, familyId);
   await prisma.refreshSession.create({
     data: {
       id: sessionId,
@@ -21,7 +21,7 @@ export async function createSession(user: Pick<User, 'id' | 'role'>, metadata: R
     },
   });
   await recordSecurityEvent({ userId: user.id, type: 'LOGIN_SUCCESS', sessionId, familyId, ...metadata });
-  return { token: createAccessToken(user.id, user.role), refreshToken };
+  return { token: createAccessToken(user.id, user.role, user.tokenVersion), refreshToken };
 }
 
 async function revokeFamily(familyId: string, reason: string): Promise<void> {
@@ -74,7 +74,8 @@ export async function rotateSession(oldToken: string, metadata: RequestMetadata)
   if (!user) throw new AppError(403, 'Phiên đăng nhập không hợp lệ');
 
   const nextSessionId = crypto.randomUUID();
-  const nextToken = createRefreshToken(user.id, user.role, nextSessionId, session.familyId);
+  if (user.status !== 'ACTIVE') throw new AppError(403, 'Tài khoản không hoạt động');
+  const nextToken = createRefreshToken(user.id, user.role, user.tokenVersion, nextSessionId, session.familyId);
   const now = new Date();
 
   const rotated = await prisma.$transaction(async (tx) => {
@@ -104,7 +105,7 @@ export async function rotateSession(oldToken: string, metadata: RequestMetadata)
   }
 
   await recordSecurityEvent({ userId: user.id, type: 'TOKEN_ROTATED', sessionId: nextSessionId, familyId: session.familyId, ...metadata });
-  return { token: createAccessToken(user.id, user.role), refreshToken: nextToken };
+  return { token: createAccessToken(user.id, user.role, user.tokenVersion), refreshToken: nextToken };
 }
 
 export async function revokeToken(refreshToken: string, metadata: RequestMetadata): Promise<void> {
@@ -116,7 +117,7 @@ export async function revokeToken(refreshToken: string, metadata: RequestMetadat
     });
     await recordSecurityEvent({ userId: payload.userId, type: 'LOGOUT', sessionId: payload.sessionId, familyId: payload.familyId, ...metadata });
   } catch {
-    // Logout remains idempotent and does not reveal token validity.
+
   }
 }
 

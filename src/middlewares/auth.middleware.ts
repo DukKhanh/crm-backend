@@ -1,18 +1,18 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import type { UserRole } from '@prisma/client';
 import { env } from '../config/env';
+import prisma from '../config/prisma';
 import { AppError } from '../errors/AppError';
 import type { AccessTokenPayload } from '../types/auth';
 
 export type { AccessTokenPayload } from '../types/auth';
 export type AuthRequest = Request;
 
-export const verifyToken = (
+export const verifyToken = async (
   req: Request,
   _res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   const authorization = req.header('Authorization');
 
   const token = authorization?.startsWith('Bearer ')
@@ -24,8 +24,9 @@ export const verifyToken = (
     return;
   }
 
+  let decoded: AccessTokenPayload;
   try {
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+    decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
       issuer: 'crm-connect-api',
       audience: 'crm-connect-mobile',
     }) as AccessTokenPayload;
@@ -34,40 +35,35 @@ export const verifyToken = (
       throw new Error('Wrong token type');
     }
 
-    req.user = decoded;
+  } catch {
+    next(new AppError(401, 'Access token không hợp lệ hoặc đã hết hạn'));
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, role: true, status: true, tokenVersion: true },
+    });
+
+    if (!user || user.tokenVersion !== decoded.tokenVersion) {
+      next(new AppError(401, 'Phiên đăng nhập đã bị thu hồi'));
+      return;
+    }
+    if (user.status !== 'ACTIVE') {
+      next(new AppError(403, 'Tài khoản đã bị tạm khóa hoặc vô hiệu hóa'));
+      return;
+    }
+
+    req.user = {
+      userId: user.id,
+      role: user.role,
+      status: user.status,
+      tokenVersion: user.tokenVersion,
+    };
 
     next();
-  } catch {
-    next(
-      new AppError(
-        401,
-        'Access token không hợp lệ hoặc đã hết hạn',
-      ),
-    );
+  } catch (error) {
+    next(error);
   }
 };
-
-export const requireRole =
-  (...roles: UserRole[]) =>
-  (
-    req: Request,
-    _res: Response,
-    next: NextFunction,
-  ): void => {
-    if (!req.user) {
-      next(new AppError(401, 'Chưa xác thực'));
-      return;
-    }
-
-    if (!roles.includes(req.user.role)) {
-      next(
-        new AppError(
-          403,
-          'Bạn không có quyền thực hiện thao tác này',
-        ),
-      );
-      return;
-    }
-
-    next();
-  };

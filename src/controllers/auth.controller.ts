@@ -8,6 +8,7 @@ import type { AuthRequest } from '../middlewares/auth.middleware';
 import { createSession, revokeAllUserSessions, revokeToken, rotateSession } from '../services/session.service';
 import { recordSecurityEvent } from '../services/securityAudit.service';
 import { getRequestMetadata } from '../utils/requestMetadata';
+import { permissionsForRole } from '../modules/authorization/permissions';
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -30,10 +31,21 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       await recordSecurityEvent({ userId: user?.id, type: 'LOGIN_FAILURE', ...metadata, metadata: { email: req.body.email } });
       throw new AppError(401, 'Email hoặc mật khẩu không đúng');
     }
+    if (user.status !== 'ACTIVE') {
+      throw new AppError(403, 'Tài khoản đã bị tạm khóa hoặc vô hiệu hóa');
+    }
     const tokens = await createSession(user, metadata);
     res.status(200).json({
       message: 'Đăng nhập thành công', ...tokens,
-      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role, avatar: user.avatar },
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar,
+        permissions: permissionsForRole(user.role),
+      },
     });
   } catch (error) { next(error); }
 };
@@ -113,7 +125,16 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     }
     const password_hash = await bcrypt.hash(req.body.newPassword, 12);
     await prisma.$transaction([
-      prisma.user.update({ where: { id: user.id }, data: { password_hash, resetOtpHash: null, otpExpiry: null, otpAttempts: 0 } }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password_hash,
+          resetOtpHash: null,
+          otpExpiry: null,
+          otpAttempts: 0,
+          tokenVersion: { increment: 1 },
+        },
+      }),
       prisma.refreshSession.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date(), revokeReason: 'PASSWORD_RESET' } }),
     ]);
     await recordSecurityEvent({ userId: user.id, type: 'PASSWORD_RESET', ...getRequestMetadata(req) });

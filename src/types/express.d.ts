@@ -1,9 +1,9 @@
-import type { AccessTokenPayload } from './auth';
+import type { AuthenticatedActor } from '../modules/authorization/actor';
 
 declare module 'express-serve-static-core' {
   interface Request {
     requestId: string;
-    user: AccessTokenPayload;
+    user: AuthenticatedActor;
   }
 }
 
